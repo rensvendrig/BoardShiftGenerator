@@ -63,6 +63,8 @@ def create_df(excel_name, SHEET, LAST_ROW, LAST_MEMBER, NAMES):
 # '''Chooses someone randomly to be shifted in, when all the members have equal amount of shifts already'''
 def choose_name(name_list, mydict):
     subset = {key: mydict[key] for key in name_list}
+    if subset == {}:
+        return []
     min_val = min(subset.values())
     names = [k for k, v in subset.items() if v == min_val]
     if len(names) >= 2:
@@ -81,12 +83,13 @@ def choose_name(name_list, mydict):
 
 def assign_shift(df, mydict, names_dict, names_with_not_0, x):
     names = choose_name(names_with_not_0, mydict)
+
+    for remaining_names in [x for x in names_dict.keys() if x not in names]:
+        df[remaining_names][x] = False
+
     for name in names:
         df[name][x] = True
         mydict[name] += 1
-
-        for remaining_names in [x for x in names_dict.keys() if x not in names]:
-            df[remaining_names][x] = False
 
         try:
             if df[name][x + 1] == 1 and df['datum'][x] == df['datum'][x + 1]:
