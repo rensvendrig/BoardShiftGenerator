@@ -3,7 +3,7 @@ import random
 import numpy as np
 import streamlit as st
 import base64
-
+import io
 st.title('BK Shift Generator: Maak automatisch BK week schema\'s!')
 
 st.markdown("""
@@ -14,19 +14,28 @@ Een aantal regels om errors te vermijden:
 * Een lege cel vult hij automatisch op met de waarde van de cel erboven
 * Hij pakt  alle kolommen tot en met de ingevulde laatste persoon variabel, en alle rijen tot en met de rij nummer variabel
 * Als 1 iemand maar heeft opgegeven voor een shift, dan krijgt alleen dit persoon de shift
-**Github:** https://github.com/rensvendrig/BKShiftGenerator.
+**Github:** https://github.com/rensvendrig/BoardShiftGenerator.
 \nGemaakt door Rens Vendrig. Vragen over de app? Mail dan naar rensvendrig121@gmail.com!
 """)
 
-def filedownload(df,text):
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
-    href = f'<a href="data:file/csv;base64,{b64}" download="BK_Schema_Week_{text}.csv">Download Schema voor Week {text}</a>'
+def filedownload(all_dfs, sheet):
+    # excel = df.to_excel(index=False)
+    # b64 = base64.b64encode(excel.encode()).decode()  # strings <-> bytes conversions
+    # href = f'<a href="data:file/csv;base64,{b64}" download="BK_Schema_Week_{text}.csv">Download Schema voor Week {text}</a>'
+    # towrite = io.BytesIO()
+
+    with pd.ExcelWriter('BK_Schema_Weken.xlsx') as writer:
+        for df, week_num in all_dfs:
+            df.to_excel(writer, sheet_name=str(week_num))
+    with open(writer, 'rb') as f:
+        f.seek(0)  # reset pointer
+        b64 = base64.b64encode(f.read()).decode()  # some strings
+        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="BK_Schema_{sheet}.csv">Download Schema voor {sheet}</a>'
     return href
 
-def create_df(EXCEL_NAME, SHEET, LAST_ROW, LAST_MEMBER, NAMES):
-    df = pd.read_excel(EXCEL_NAME, sheet_name=SHEET)
-    df = df.loc[:LAST_ROW - 2, :LAST_MEMBER]
+def create_df(excel_name, SHEET, LAST_ROW, LAST_MEMBER, NAMES):
+    df = pd.read_excel(excel_name, sheet_name=SHEET)
+    df = df.loc[:int(LAST_ROW) - 2, :LAST_MEMBER]
     df.rename(columns={'Unnamed: 0': 'datum', 'Unnamed: 1': 'tijd'}, inplace=True)
     df.ffill(inplace=True)
     df[NAMES] = df[NAMES].replace(regex=r'\bheel\b|\bHeel\b', value=2)
@@ -142,26 +151,31 @@ def rename_columns(df):
     new = pd.MultiIndex.from_tuples(new_columns, names=['datum', 'tijd'])
     return new
 
-EXCEL_NAME = 'Beschikbaarheid BK shifts B22.xlsx'
-SHEET = 'September 2021'
-LAST_ROW = 50
-LAST_MEMBER = 'Rens'
-NAMES = ['Kris','Myrthe','Thomas','Lukas','Noor','Feline','Lotte','Kyra','Bram','Rens']
 
+excel_name = st.file_uploader("Upload Beschikbaarheid Schema")
 
-uploaded_file = st.file_uploader("Upload Beschikbaarheid Schema")
+if excel_name is not None:
+    col1, col2 = st.columns(2)
+    with col1:
+        SHEET = st.text_input("Naam sheet", 'September 2021')
+        LAST_ROW = st.text_input("Laatste rijnummer", 50)
+    with col2:
+        LAST_MEMBER = st.text_input("Laatste bestuurlid", 'Rens')
+        NAMES = st.text_input('Alle bestuurleden (gescheiden door een komma-spatie \', \')',
+                          'Kris, Myrthe, Thomas, Lukas, Noor, Feline, Lotte, Kyra, Bram, Rens').split(', ')
 
-if uploaded_file is not None:
     start_execution = st.button('Genereer BK Schema')
-    if start_execution:
 
-        df = create_df(EXCEL_NAME, SHEET, LAST_ROW, LAST_MEMBER, NAMES)
+    if start_execution:
+        df = create_df(excel_name, SHEET, LAST_ROW, LAST_MEMBER, NAMES)
+
         dfWeekendShiftCount = dict.fromkeys(NAMES, 0)
 
         weeks = [g for n, g in df.groupby(pd.Grouper(key='datum', freq='W'))]
 
+        all_dfs = []
         for weekdf in weeks:
             newdf, dfNormalShiftCount, dfWeekendShiftCount, week_num = make_scheme(weekdf, dfWeekendShiftCount)
-
-            st.markdown(filedownload(newdf, week_num),
-                        unsafe_allow_html=True)
+            all_dfs.append((newdf, week_num))
+        st.markdown(filedownload(all_dfs, SHEET),
+                    unsafe_allow_html=True)
