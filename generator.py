@@ -4,7 +4,7 @@ import numpy as np
 import streamlit as st
 import base64
 import locale
-locale.setlocale(locale.LC_ALL,'')
+locale.setlocale(locale.LC_ALL,'nl_NL')
 st.title('BK Shift Generator: Maak automatisch BK week schema\'s!')
 st.markdown("""
 Maak programma maakt BK week schema\'s om het werk van de secri pupil te verzachten! 
@@ -139,9 +139,9 @@ def rename_columns(df):
     new_columns = []
     for timestamp, shift in df.columns:
         if timestamp != '#shifts':
-            day_name = str(timestamp.day_name('Nederlands').lower())
+            day_name = str(timestamp.day_name().lower())
             day = str(timestamp.day)
-            month_name = str(timestamp.month_name('Dutch').lower())
+            month_name = str(timestamp.month_name().lower())
             new_timestamp = day_name + " " + day + " " + month_name
         else:
             new_timestamp = timestamp
