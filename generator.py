@@ -139,7 +139,7 @@ def rename_columns(df):
     new_columns = []
     for timestamp, shift in df.columns:
         if timestamp != '#shifts':
-            day_name = str(timestamp.day_name('Dutch').lower())
+            day_name = str(timestamp.day_name('Nederlands').lower())
             day = str(timestamp.day)
             month_name = str(timestamp.month_name('Dutch').lower())
             new_timestamp = day_name + " " + day + " " + month_name
