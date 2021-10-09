@@ -4,7 +4,7 @@ import numpy as np
 import streamlit as st
 import base64
 import locale
-locale.setlocale(locale.LC_ALL,'nl_NL')
+locale.setlocale(locale.LC_ALL,'')
 st.title('BK Shift Generator: Maak automatisch BK week schema\'s!')
 st.markdown("""
 Maak programma maakt BK week schema\'s om het werk van de secri pupil te verzachten! 
